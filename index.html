@@ -402,7 +402,12 @@ input,select{border-radius:0}
 <script>
 /* Tiempo real fuera de claude.ai: ntfy.sh como canal de mensajes. Expone room y user con la misma forma que usa el juego. */
 (() => {
-  let R = null; try { R = JSON.parse(localStorage.getItem('x313room') || 'null'); } catch (e) {}
+  let R = null;
+  try {
+    const go = localStorage.getItem('x313go'); localStorage.removeItem('x313go');
+    if (go) R = JSON.parse(localStorage.getItem('x313room') || 'null');
+    else { localStorage.removeItem('x313room'); localStorage.removeItem('x313p'); localStorage.removeItem('x313g'); }
+  } catch (e) {}
   if (R && !/^[A-Z0-9]{4,12}$/.test(R.code || '')) R = null;
   window.__X313 = {has: !!R, code: R ? R.code : '', role: R ? R.role : ''};
   const TOPIC = R ? 'x313-' + R.code.toLowerCase() : 'x313-sin-sala';
@@ -2079,7 +2084,7 @@ function gateView(){
     <div class="panel" style="padding:20px"><h3 style="margin-bottom:10px">Unirme a una partida</h3><form data-form="gjoin" class="stack"><label class="kicker" for="gcode">Código de sala</label><input id="gcode" class="field" maxlength="12" autocomplete="off" autocapitalize="characters" placeholder="Ej. ABCD23" style="text-transform:uppercase;letter-spacing:.2em;font-size:22px"><button class="btn" type="submit">Unirme a partida</button><span class="status-line" id="gmsg"></span></form></div>
     <div class="panel" style="padding:20px"><h3 style="margin-bottom:10px">Soy el anfitrión</h3><p class="dim" style="margin-bottom:12px">Crea la sala, comparte el código y controla la partida.</p><button class="btn ghost" data-g="create">Crear partida</button></div></div>`;
 }
-function setRoomChoice(code, role){ try { localStorage.setItem('x313room', JSON.stringify({code, role})); } catch (e) {} try { localStorage.removeItem('x313p'); localStorage.removeItem('x313g'); } catch (e) {} location.hash = ''; location.reload(); }
+function setRoomChoice(code, role){ try { localStorage.setItem('x313room', JSON.stringify({code, role})); localStorage.setItem('x313go', '1'); } catch (e) {} try { localStorage.removeItem('x313p'); localStorage.removeItem('x313g'); } catch (e) {} location.hash = ''; location.reload(); }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-g]'); if (!b) return;
   const g = b.dataset.g;
