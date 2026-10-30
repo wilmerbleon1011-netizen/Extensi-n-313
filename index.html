@@ -444,8 +444,8 @@ input,select{border-radius:0}
   }
   function connect(){
     try { es = new EventSource(BASE + '/' + TOPIC + '/sse?since=40s'); } catch (e) { setConn(false); return; }
-    es.onopen = () => { setConn(true); sendPres(true); };
-    es.onerror = () => { setConn(false); };
+    es.onopen = () => { window.__sse = 'abierto'; setConn(true); sendPres(true); };
+    es.onerror = () => { window.__sse = 'error'; setConn(false); };
     es.onmessage = e => { lastRx = Date.now(); onMsg(e.data); };
   }
   let lastRx = 0, polling = false;
@@ -1962,13 +1962,13 @@ function hostBits(){
     ? `<div class="row"><button class="btn ghost sm" data-a="add" data-m="5">+5 min</button><button class="btn ghost sm" data-a="add" data-m="-5">−5 min</button><button class="btn ghost sm" data-a="reset">${arm}</button></div>
        <div class="row" style="margin-top:8px"><button class="btn ghost sm" data-a="win">Marcar victoria</button><button class="btn ghost sm" data-a="lose">Marcar derrota</button></div>`
     : `<div class="row"><span class="tag ${G.status === 'won' ? 'ok' : ''}">${G.status === 'won' ? 'Escaparon' : 'Se acabó el tiempo'}</span><button class="btn sm" data-a="reset">${arm}</button></div>`);
-  setR('hnet', net.offline ? `<span class="err">Sin tiempo real: marca el progreso a mano en las salas.</span>` : net.online ? `Tiempo real conectado · ${pl.length} jugadores identificados · ${Math.max(0, net.peers.filter(p => p.kind === 'viewer').length - 1)} pantallas abiertas` : (pl.length ? `Sin canal en vivo, usando respaldo · ${pl.length} jugadores` : 'Conectando...'));
+  setR('hnet', (net.offline ? `<span class="err">Sin tiempo real: marca el progreso a mano en las salas.</span>` : net.online ? `Tiempo real conectado · ${pl.length} jugadores identificados · ${Math.max(0, net.peers.filter(p => p.kind === 'viewer').length - 1)} pantallas abiertas` : (pl.length ? `Sin canal en vivo, usando respaldo · ${pl.length} jugadores` : 'Conectando...')) + `<br><span class="status-line">${esc(diagText())}</span>`);
   const by = {}; Object.entries(G.assign).forEach(([pid, rid2]) => { const p = pl.find(x => x.pid === pid); if (p) (by[rid2] = by[rid2] || []).push(p.name || 'Alguien'); });
   setR('hplayers', pl.length ? `<table class="pl"><thead><tr><th>Nombre</th><th>Sala</th><th>Estado</th></tr></thead><tbody>${pl.map(p => {
       const rm = ROOM_BY[G.assign[p.pid] || p.room];
       const st = p.solved ? '<span class="tag ok">resuelta</span>' : !p.joined ? '' : G.assign[p.pid] ? '<span class="tag">en curso</span>' : '<span class="tag">en espera</span>';
       return `<tr><td>${esc(p.name || 'Alguien')}</td><td>${rm ? esc(rm.name) : '-'}</td><td>${st}${(p.hints | 0) ? ` <span class="dim">${p.hints | 0} ${(p.hints | 0) === 1 ? 'pista' : 'pistas'}</span>` : ''}</td></tr>`; }).join('')}</tbody></table>`
-    : `<div class="empty">Nadie en la línea todavía. Comparte el enlace: cada persona debe abrirlo con su sesión de Claude iniciada.</div>`);
+    : `<div class="empty">Nadie en la línea todavía. Comparte el enlace y el código de sala.</div>`);
   setR('hhosp', hospitalSVG({solved: G.solved, assign: G.assign, names: by, click: true}));
   const ids = CORE_IDS.filter(id => G.solved[id]), wh = BONUS_IDS.filter(id => G.solved[id]);
   const rot = i => ((i * 37) % 5 - 2) * .5;
@@ -2093,6 +2093,8 @@ document.addEventListener('submit', e => {
   if (c.length < 4){ $('#gmsg').textContent = 'Escribe el código completo.'; return; }
   setRoomChoice(c, 'player');
 });
+function diagText(){ const d = net.dg; return `v14 sse:${window.__sse || '-'} room:${net.room ? (net.online ? 'on' : 'off') : 'NULL'} db:${net.db ? 'ok' : 'NULL'} user:${net.user ? 'ok' : 'NULL'} host:${net.host ? 1 : 0} peers:${net.peers.length} pres:${d.pw || '-'} lobby:${d.lw || '-'} send:${window.__lastPost || '-'} fxerr:${d.fe || '-'} err:${[d.st, d.fx, d.pe, d.cn, d.ds, d.df].filter(Boolean).join(',') || '-'}`;
+}
 async function boot(){
   if (WEB && !window.__X313.has){ gateView(); return; }
   sfx.btn(); route();
@@ -2103,7 +2105,7 @@ async function boot(){
   const dge = k => e => { net.dg[k] = (e && e.code) || 'err'; };
   setInterval(() => {
     let el = document.getElementById('dg'); if (!el){ el = document.createElement('div'); el.id = 'dg'; if (!net.host && !/dg/.test(location.hash)) return; el.style.cssText = 'position:fixed;left:0;top:0;z-index:99999;font:12px monospace;color:#0f0;background:#000d;padding:2px 4px;pointer-events:none;max-width:95vw'; document.body.appendChild(el); }
-    const d = net.dg; el.textContent = `v12 room:${net.room ? (net.online ? 'on' : 'off') : 'NULL'} db:${net.db ? 'ok' : 'NULL'} user:${net.user ? 'ok' : 'NULL'} host:${net.host ? 1 : 0} peers:${net.peers.length} pres:${d.pw || '-'} lobby:${d.lw || '-'} send:${window.__lastPost || '-'} fxerr:${d.fe || '-'} err:${[d.st, d.fx, d.pe, d.cn, d.ds, d.df].filter(Boolean).join(',') || '-'}`;
+    const d = net.dg; el.textContent = diagText();
   }, 1000);
   if (!room) net.offline = true;
   try { net.host = !!(user && await user.isOwner()); } catch (e) { net.host = false; }
